@@ -21,7 +21,8 @@ interface NycFileCoverage {
  * Division by zero resolves to 100 % (the item is considered fully covered
  * when there is nothing to cover).
  */
-function metricFromMap(counts: Record<string, number>): CoverageMetric {
+function metricFromMap(counts: Record<string, number> | null | undefined): CoverageMetric {
+  if (!counts) return { covered: 0, total: 0, pct: 100 };
   const values = Object.values(counts);
   const total = values.length;
   const covered = values.filter((v) => v > 0).length;
@@ -33,7 +34,8 @@ function metricFromMap(counts: Record<string, number>): CoverageMetric {
  * Computes a {@link CoverageMetric} for branches, which are stored as arrays
  * of hit counts rather than scalar values.
  */
-function branchMetricFromMap(counts: Record<string, number[]>): CoverageMetric {
+function branchMetricFromMap(counts: Record<string, number[]> | null | undefined): CoverageMetric {
+  if (!counts) return { covered: 0, total: 0, pct: 100 };
   const flat = Object.values(counts).flat();
   const total = flat.length;
   const covered = flat.filter((v) => v > 0).length;
@@ -66,7 +68,7 @@ export class CoverageParser {
         statements: metricFromMap(entry.s),
         branches: branchMetricFromMap(entry.b),
         functions: metricFromMap(entry.f),
-        lines: metricFromMap(entry.l),
+        lines: metricFromMap(entry.l as Record<string, number> | undefined),
       };
     });
 

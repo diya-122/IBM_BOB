@@ -1,0 +1,370 @@
+{
+  "scanResult": {
+    "sourceFiles": [
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\server.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\app.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\middleware\\validation.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\middleware\\auth.js"
+    ],
+    "testFiles": [
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\__tests__\\users.test.js",
+      "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\__tests__\\helpers.test.js"
+    ],
+    "framework": "jest"
+  },
+  "coverageData": [
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\app.js",
+      "statements": {
+        "covered": 12,
+        "total": 15,
+        "pct": 80
+      },
+      "branches": {
+        "covered": 0,
+        "total": 4,
+        "pct": 0
+      },
+      "functions": {
+        "covered": 0,
+        "total": 2,
+        "pct": 0
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "statements": {
+        "covered": 17,
+        "total": 47,
+        "pct": 36.17021276595745
+      },
+      "branches": {
+        "covered": 0,
+        "total": 19,
+        "pct": 0
+      },
+      "functions": {
+        "covered": 0,
+        "total": 6,
+        "pct": 0
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "statements": {
+        "covered": 16,
+        "total": 37,
+        "pct": 43.24324324324324
+      },
+      "branches": {
+        "covered": 0,
+        "total": 17,
+        "pct": 0
+      },
+      "functions": {
+        "covered": 0,
+        "total": 5,
+        "pct": 0
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "statements": {
+        "covered": 3,
+        "total": 19,
+        "pct": 15.789473684210526
+      },
+      "branches": {
+        "covered": 1,
+        "total": 8,
+        "pct": 12.5
+      },
+      "functions": {
+        "covered": 1,
+        "total": 8,
+        "pct": 12.5
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "statements": {
+        "covered": 18,
+        "total": 35,
+        "pct": 51.42857142857142
+      },
+      "branches": {
+        "covered": 0,
+        "total": 12,
+        "pct": 0
+      },
+      "functions": {
+        "covered": 1,
+        "total": 5,
+        "pct": 20
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "statements": {
+        "covered": 6,
+        "total": 23,
+        "pct": 26.08695652173913
+      },
+      "branches": {
+        "covered": 2,
+        "total": 14,
+        "pct": 14.285714285714285
+      },
+      "functions": {
+        "covered": 1,
+        "total": 4,
+        "pct": 25
+      },
+      "lines": {
+        "covered": 0,
+        "total": 0,
+        "pct": 100
+      }
+    }
+  ],
+  "riskScores": [
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "functionName": "getOrdersList",
+      "complexity": 7,
+      "importCount": 1,
+      "riskScore": 7,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "functionName": "placeOrder",
+      "complexity": 7,
+      "importCount": 1,
+      "riskScore": 7,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "functionName": "getOrderById",
+      "complexity": 7,
+      "importCount": 1,
+      "riskScore": 7,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "functionName": "updateOrderStatus",
+      "complexity": 7,
+      "importCount": 1,
+      "riskScore": 7,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\orders.js",
+      "functionName": "cancelOrder",
+      "complexity": 7,
+      "importCount": 1,
+      "riskScore": 7,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "functionName": "getAllProducts",
+      "complexity": 5,
+      "importCount": 1,
+      "riskScore": 5,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "functionName": "getProductById",
+      "complexity": 5,
+      "importCount": 1,
+      "riskScore": 5,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "functionName": "createProduct",
+      "complexity": 5,
+      "importCount": 1,
+      "riskScore": 5,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "functionName": "updateProduct",
+      "complexity": 5,
+      "importCount": 1,
+      "riskScore": 5,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\products.js",
+      "functionName": "deleteProduct",
+      "complexity": 5,
+      "importCount": 1,
+      "riskScore": 5,
+      "coveragePercent": 0
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "functionName": "getUsersList",
+      "complexity": 4,
+      "importCount": 1,
+      "riskScore": 4,
+      "coveragePercent": 20
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "functionName": "getUserById",
+      "complexity": 4,
+      "importCount": 1,
+      "riskScore": 4,
+      "coveragePercent": 20
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "functionName": "createUser",
+      "complexity": 4,
+      "importCount": 1,
+      "riskScore": 4,
+      "coveragePercent": 20
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "functionName": "updateUser",
+      "complexity": 4,
+      "importCount": 1,
+      "riskScore": 4,
+      "coveragePercent": 20
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\routes\\users.js",
+      "functionName": "deleteUser",
+      "complexity": 4,
+      "importCount": 1,
+      "riskScore": 4,
+      "coveragePercent": 20
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "functionName": "formatDate",
+      "complexity": 3,
+      "importCount": 1,
+      "riskScore": 3,
+      "coveragePercent": 25
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "functionName": "calculateDiscount",
+      "complexity": 3,
+      "importCount": 1,
+      "riskScore": 3,
+      "coveragePercent": 25
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "functionName": "generateId",
+      "complexity": 3,
+      "importCount": 1,
+      "riskScore": 3,
+      "coveragePercent": 25
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "functionName": "paginate",
+      "complexity": 3,
+      "importCount": 1,
+      "riskScore": 3,
+      "coveragePercent": 25
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\utils\\helpers.js",
+      "functionName": "start",
+      "complexity": 3,
+      "importCount": 1,
+      "riskScore": 3,
+      "coveragePercent": 25
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "functionName": "findAll",
+      "complexity": 2,
+      "importCount": 1,
+      "riskScore": 2,
+      "coveragePercent": 12.5
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "functionName": "findById",
+      "complexity": 2,
+      "importCount": 1,
+      "riskScore": 2,
+      "coveragePercent": 12.5
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "functionName": "insert",
+      "complexity": 2,
+      "importCount": 1,
+      "riskScore": 2,
+      "coveragePercent": 12.5
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "functionName": "update",
+      "complexity": 2,
+      "importCount": 1,
+      "riskScore": 2,
+      "coveragePercent": 12.5
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\db.js",
+      "functionName": "remove",
+      "complexity": 2,
+      "importCount": 1,
+      "riskScore": 2,
+      "coveragePercent": 12.5
+    },
+    {
+      "filePath": "C:\\Users\\dhriti\\Downloads\\IBM_BOB\\sample-app\\src\\app.js",
+      "functionName": "(unknown)",
+      "complexity": 1,
+      "importCount": 1,
+      "riskScore": 1,
+      "coveragePercent": 0
+    }
+  ]
+}

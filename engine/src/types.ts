@@ -93,6 +93,10 @@ export interface GenerationResult {
   error?: string;
   /** Number of test cases written to the output file. */
   testsGenerated: number;
+  /** Which generator produced this result: 'bob' or 'static'. */
+  generator?: 'bob' | 'static';
+  /** Bobcoin cost reported by `bob run --format json` stats, if available. */
+  sessionCost?: number;
 }
 
 /**

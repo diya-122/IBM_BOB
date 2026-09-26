@@ -1,7 +1,7 @@
 import ora from 'ora';
 import chalk from 'chalk';
 import { TestPlan, GenerationResult } from '../types';
-import { TestWriter } from './test-writer';
+import { BobTestWriter } from './bob-test-writer';
 
 /**
  * Groups test plans by the priority label for progressive spinner feedback.
@@ -19,10 +19,11 @@ function groupByPriority(plans: TestPlan[]): Map<string, TestPlan[]> {
 }
 
 /**
- * Runs {@link TestWriter} instances in parallel across all test plans.
+ * Runs {@link BobTestWriter} instances in parallel across all test plans,
+ * shelling out to Bob Shell per function for AI-generated test content.
  */
 export class ParallelOrchestrator {
-  private readonly writer = new TestWriter();
+  private readonly writer = new BobTestWriter();
 
   /**
    * Executes test generation for every plan in `plans` concurrently using

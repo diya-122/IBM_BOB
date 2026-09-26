@@ -1,0 +1,1 @@
+{"version":3,"file":"coverage-diff.d.ts","sourceRoot":"","sources":["../../src/reporter/coverage-diff.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,YAAY,EAAE,cAAc,EAAE,MAAM,UAAU,CAAC;AAmBxD;;GAEG;AACH,qBAAa,YAAY;IACvB;;;;;;;;;;;;;;;;OAgBG;IACH,OAAO,CAAC,MAAM,EAAE,YAAY,EAAE,EAAE,KAAK,EAAE,YAAY,EAAE,GAAG,cAAc;CAsCvE"}

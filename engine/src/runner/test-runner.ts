@@ -40,13 +40,14 @@ interface JestJsonResult {
 /**
  * Spawns a Jest child process and collects its `--json` output.
  */
-function spawnJest(testPaths: string[]): Promise<string> {
+function spawnJest(testPaths: string[], cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const errChunks: Buffer[] = [];
 
     const child = spawn('npx', ['jest', '--testPathPattern', testPaths.join('|'), '--json', '--forceExit'], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: cwd ?? process.cwd(),
     });
 
     child.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -106,13 +107,19 @@ export class TestRunner {
    * @param testPaths - Paths passed to Jest's `--testPathPattern` flag.
    * @returns A promise that resolves to the aggregated {@link RunResult}.
    */
+  /**
+   * Optional project directory to run Jest in. Defaults to `process.cwd()`.
+   * Set this to the project root so Jest resolves its config correctly.
+   */
+  projectDir?: string;
+
   async runTests(testPaths: string[]): Promise<RunResult> {
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let json: string;
       try {
-        json = await spawnJest(testPaths);
+        json = await spawnJest(testPaths, this.projectDir);
       } catch (err) {
         if (attempt === maxAttempts) {
           const message = err instanceof Error ? err.message : String(err);
