@@ -1,0 +1,7 @@
+{
+  "reporter": ["json", "text"],
+  "report-dir": "coverage",
+  "include": ["src/**/*.js"],
+  "exclude": ["src/server.js"],
+  "all": true
+}

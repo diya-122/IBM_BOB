@@ -1,0 +1,32 @@
+{
+  "name": "testforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered intelligent test generation and coverage maximization tool",
+  "workspaces": [
+    "engine",
+    "dashboard",
+    "sample-app"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "build": "npm run build --workspace=engine",
+    "dev:dashboard": "npm run dev --workspace=dashboard",
+    "dev:sample": "npm run dev --workspace=sample-app",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint . --ext .ts,.tsx,.js",
+    "clean": "rm -rf engine/dist dashboard/dist"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
