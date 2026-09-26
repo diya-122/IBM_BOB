@@ -1,1 +1,0 @@
-{"version":3,"file":"risk-scorer.d.ts","sourceRoot":"","sources":["../../src/analyzer/risk-scorer.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,YAAY,EAAE,SAAS,EAAE,MAAM,UAAU,CAAC;AAEnD,OAAO,EAAE,SAAS,EAAE,CAAC;AAmFrB;;GAEG;AACH,qBAAa,UAAU;IACrB;;;;;;;;;;;;;;OAcG;IACH,KAAK,CAAC,YAAY,EAAE,YAAY,EAAE,EAAE,WAAW,EAAE,MAAM,GAAG,SAAS,EAAE;CAgCtE"}
