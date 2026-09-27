@@ -1,202 +1,321 @@
 'use strict';
 
-const { deleteProduct } = require('../../src/routes/products');
+jest.mock('../../src/db');
+jest.mock('uuid');
 
+const { findAll, findById, insert, update, remove } = require('../../src/db');
+const { v4: uuidv4 } = require('uuid');
+const {
+  getAllProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} = require('../../src/routes/products');
+
+// ---------------------------------------------------------------------------
+// Helper: build a minimal Express-style mock response
+// ---------------------------------------------------------------------------
 function makeRes() {
-  const res = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json   = jest.fn().mockReturnValue(res);
-  res.send   = jest.fn().mockReturnValue(res);
+  const json   = jest.fn();
+  const send   = jest.fn();
+  const status = jest.fn();
+
+  const res = { json, send, status };
+  // status() must return the same res so callers can chain .json() / .send()
+  status.mockReturnValue(res);
   return res;
 }
 
-jest.mock('../../src/db', () => ({
-  findAll:  jest.fn(),
-  findById: jest.fn(),
-  insert:   jest.fn(),
-  update:   jest.fn(),
-  remove:   jest.fn(),
-}));
+// ---------------------------------------------------------------------------
+// getAllProducts
+// ---------------------------------------------------------------------------
+describe('getAllProducts', () => {
+  afterEach(() => jest.clearAllMocks());
 
-const db = require('../../src/db');
+  test('happy path — returns all products as JSON', () => {
+    const products = [
+      { id: 'p1', name: 'Widget A', price: 9.99,  stock: 100 },
+      { id: 'p2', name: 'Widget B', price: 24.99, stock: 50  },
+    ];
+    findAll.mockReturnValue(products);
 
-beforeEach(() => {
-  jest.clearAllMocks();
+    const req = {};
+    const res = makeRes();
+
+    getAllProducts(req, res);
+
+    expect(findAll).toHaveBeenCalledWith('products');
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
+  test('edge case — returns empty array when store is empty', () => {
+    findAll.mockReturnValue([]);
+
+    const req = {};
+    const res = makeRes();
+
+    getAllProducts(req, res);
+
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
 });
 
+// ---------------------------------------------------------------------------
+// getProductById
+// ---------------------------------------------------------------------------
+describe('getProductById', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('happy path — returns the matching product', () => {
+    const product = { id: 'p1', name: 'Widget A', price: 9.99, stock: 100 };
+    findById.mockReturnValue(product);
+
+    const req = { params: { id: 'p1' } };
+    const res = makeRes();
+
+    getProductById(req, res);
+
+    expect(findById).toHaveBeenCalledWith('products', 'p1');
+    expect(res.json).toHaveBeenCalledWith(product);
+  });
+
+  test('error case — 404 when product does not exist', () => {
+    findById.mockReturnValue(null);
+
+    const req = { params: { id: 'does-not-exist' } };
+    const res = makeRes();
+
+    getProductById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
+  });
+
+  test('edge case — id is an empty string returns 404', () => {
+    findById.mockReturnValue(null);
+
+    const req = { params: { id: '' } };
+    const res = makeRes();
+
+    getProductById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createProduct
+// ---------------------------------------------------------------------------
+describe('createProduct', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('happy path — creates and returns the new product with 201', () => {
+    uuidv4.mockReturnValue('generated-uuid');
+    const created = { id: 'generated-uuid', name: 'Gadget Z', price: 19.99, stock: 5 };
+    insert.mockReturnValue(created);
+
+    const req = { body: { name: 'Gadget Z', price: 19.99, stock: 5 } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(insert).toHaveBeenCalledWith('products', {
+      id: 'generated-uuid',
+      name: 'Gadget Z',
+      price: 19.99,
+      stock: 5,
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(created);
+  });
+
+  test('edge case — stock defaults to 0 when omitted', () => {
+    uuidv4.mockReturnValue('uuid-no-stock');
+    const created = { id: 'uuid-no-stock', name: 'No-Stock Item', price: 5.00, stock: 0 };
+    insert.mockReturnValue(created);
+
+    const req = { body: { name: 'No-Stock Item', price: 5.00 } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(insert).toHaveBeenCalledWith('products', {
+      id: 'uuid-no-stock',
+      name: 'No-Stock Item',
+      price: 5.00,
+      stock: 0,
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('error case — 400 when name is missing', () => {
+    const req = { body: { price: 9.99 } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Missing required fields: name, price',
+    });
+  });
+
+  test('error case — 400 when price is missing', () => {
+    const req = { body: { name: 'Widget' } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Missing required fields: name, price',
+    });
+  });
+
+  test('error case — 400 when price is null', () => {
+    const req = { body: { name: 'Widget', price: null } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Missing required fields: name, price',
+    });
+  });
+
+  test('error case — 400 when price is negative', () => {
+    const req = { body: { name: 'Widget', price: -1 } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'price must be a non-negative number',
+    });
+  });
+
+  test('error case — 400 when price is a string', () => {
+    const req = { body: { name: 'Widget', price: 'free' } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'price must be a non-negative number',
+    });
+  });
+
+  test('edge case — price of zero is accepted', () => {
+    uuidv4.mockReturnValue('uuid-zero-price');
+    const created = { id: 'uuid-zero-price', name: 'Free Item', price: 0, stock: 0 };
+    insert.mockReturnValue(created);
+
+    const req = { body: { name: 'Free Item', price: 0 } };
+    const res = makeRes();
+
+    createProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(created);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateProduct
+// ---------------------------------------------------------------------------
+describe('updateProduct', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('happy path — returns updated product', () => {
+    const updated = { id: 'p1', name: 'Widget A+', price: 12.99, stock: 80 };
+    update.mockReturnValue(updated);
+
+    const req = { params: { id: 'p1' }, body: { name: 'Widget A+', price: 12.99 } };
+    const res = makeRes();
+
+    updateProduct(req, res);
+
+    expect(update).toHaveBeenCalledWith('products', 'p1', { name: 'Widget A+', price: 12.99 });
+    expect(res.json).toHaveBeenCalledWith(updated);
+  });
+
+  test('error case — 404 when product does not exist', () => {
+    update.mockReturnValue(null);
+
+    const req = { params: { id: 'ghost' }, body: { price: 5.00 } };
+    const res = makeRes();
+
+    updateProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
+  });
+
+  test('edge case — partial update (single field) is forwarded as-is', () => {
+    const updated = { id: 'p2', name: 'Widget B', price: 24.99, stock: 99 };
+    update.mockReturnValue(updated);
+
+    const req = { params: { id: 'p2' }, body: { stock: 99 } };
+    const res = makeRes();
+
+    updateProduct(req, res);
+
+    expect(update).toHaveBeenCalledWith('products', 'p2', { stock: 99 });
+    expect(res.json).toHaveBeenCalledWith(updated);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deleteProduct
+// ---------------------------------------------------------------------------
 describe('deleteProduct', () => {
-  describe('when the product exists', () => {
-    it('calls remove with the correct collection and id', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p1' } };
-      const res = makeRes();
+  afterEach(() => jest.clearAllMocks());
 
-      deleteProduct(req, res);
+  test('happy path — responds with 204 and no body', () => {
+    remove.mockReturnValue(true);
 
-      expect(db.remove).toHaveBeenCalledTimes(1);
-      expect(db.remove).toHaveBeenCalledWith('products', 'p1');
-    });
+    const req = { params: { id: 'p1' } };
+    const res = makeRes();
 
-    it('responds with HTTP 204', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p1' } };
-      const res = makeRes();
+    deleteProduct(req, res);
 
-      deleteProduct(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(204);
-    });
-
-    it('calls send() with no body after 204', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p1' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(res.send).toHaveBeenCalledWith();
-    });
-
-    it('does not call res.json when deletion succeeds', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p2' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(res.json).not.toHaveBeenCalled();
-    });
+    expect(remove).toHaveBeenCalledWith('products', 'p1');
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.send).toHaveBeenCalled();
   });
 
-  describe('when the product does not exist', () => {
-    it('calls remove with the correct collection and id', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'nonexistent' } };
-      const res = makeRes();
+  test('error case — 404 when product does not exist', () => {
+    remove.mockReturnValue(false);
 
-      deleteProduct(req, res);
+    const req = { params: { id: 'no-such-product' } };
+    const res = makeRes();
 
-      expect(db.remove).toHaveBeenCalledTimes(1);
-      expect(db.remove).toHaveBeenCalledWith('products', 'nonexistent');
-    });
+    deleteProduct(req, res);
 
-    it('responds with HTTP 404', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'nonexistent' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-    });
-
-    it('returns a JSON error body with the expected message', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'nonexistent' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
-    });
-
-    it('does not call res.send when product is not found', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'nonexistent' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(res.send).not.toHaveBeenCalled();
-    });
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
   });
 
-  describe('edge cases', () => {
-    it('handles an empty-string id — delegates to remove and returns 404', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: '' } };
-      const res = makeRes();
+  test('edge case — delete is idempotent: second call for same id returns 404', () => {
+    // First call succeeds, second call returns false (already gone)
+    remove.mockReturnValueOnce(true).mockReturnValueOnce(false);
 
-      deleteProduct(req, res);
+    const req1 = { params: { id: 'p3' } };
+    const res1 = makeRes();
+    deleteProduct(req1, res1);
+    expect(res1.status).toHaveBeenCalledWith(204);
 
-      expect(db.remove).toHaveBeenCalledWith('products', '');
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Product not found' });
-    });
-
-    it('handles a numeric-string id that matches — responds 204', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: '42' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(db.remove).toHaveBeenCalledWith('products', '42');
-      expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.send).toHaveBeenCalled();
-    });
-
-    it('calls remove exactly once regardless of the outcome', () => {
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p3' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(db.remove).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call remove more than once when the product is absent', () => {
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'ghost' } };
-      const res = makeRes();
-
-      deleteProduct(req, res);
-
-      expect(db.remove).toHaveBeenCalledTimes(1);
-    });
-
-    it('status and send are called in the correct chained order on success', () => {
-      const callOrder = [];
-      db.remove.mockReturnValue(true);
-      const req = { params: { id: 'p1' } };
-      const res = {};
-      res.status = jest.fn().mockImplementation((code) => {
-        callOrder.push(`status(${code})`);
-        return res;
-      });
-      res.send = jest.fn().mockImplementation(() => {
-        callOrder.push('send()');
-        return res;
-      });
-      res.json = jest.fn().mockReturnValue(res);
-
-      deleteProduct(req, res);
-
-      expect(callOrder).toEqual(['status(204)', 'send()']);
-    });
-
-    it('status and json are called in the correct chained order on not-found', () => {
-      const callOrder = [];
-      db.remove.mockReturnValue(false);
-      const req = { params: { id: 'missing' } };
-      const res = {};
-      res.status = jest.fn().mockImplementation((code) => {
-        callOrder.push(`status(${code})`);
-        return res;
-      });
-      res.json = jest.fn().mockImplementation((body) => {
-        callOrder.push(`json(${JSON.stringify(body)})`);
-        return res;
-      });
-      res.send = jest.fn().mockReturnValue(res);
-
-      deleteProduct(req, res);
-
-      expect(callOrder).toEqual([
-        'status(404)',
-        `json(${JSON.stringify({ error: 'Product not found' })})`,
-      ]);
-    });
+    const req2 = { params: { id: 'p3' } };
+    const res2 = makeRes();
+    deleteProduct(req2, res2);
+    expect(res2.status).toHaveBeenCalledWith(404);
+    expect(res2.json).toHaveBeenCalledWith({ error: 'Product not found' });
   });
 });

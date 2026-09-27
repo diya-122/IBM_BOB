@@ -3,361 +3,324 @@
 jest.mock('../../src/db');
 jest.mock('uuid');
 
-const { findAll, insert } = require('../../src/db');
+const { findAll, findById, insert, update } = require('../../src/db');
 const { v4: uuidv4 } = require('uuid');
-const { placeOrder } = require('../../src/routes/orders');
+
+const {
+  getOrdersList,
+  placeOrder,
+  getOrderById,
+  updateOrderStatus,
+  cancelOrder,
+} = require('../../src/routes/orders');
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helper – build a mock Express res object following the rule:
+// define jest.fn() calls first, then attach to the object.
 // ---------------------------------------------------------------------------
-
 function makeRes() {
-  const res = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json   = jest.fn().mockReturnValue(res);
+  const json   = jest.fn();
+  const send   = jest.fn();
+  const status = jest.fn();
+  const res    = { json, send, status };
+  // status() must return res so callers can chain .json()
+  status.mockReturnValue(res);
   return res;
 }
 
-function makeReq(body = {}) {
-  return { body };
-}
-
 // ---------------------------------------------------------------------------
-// Shared product catalogue used across tests
+// getOrdersList  (exported as getOrdersList)
 // ---------------------------------------------------------------------------
+describe('getOrdersList', () => {
+  beforeEach(() => jest.clearAllMocks());
 
-const PRODUCTS = [
-  { id: 'p1', name: 'Widget A', price: 9.99,  stock: 100 },
-  { id: 'p2', name: 'Widget B', price: 24.99, stock: 50  },
-  { id: 'p3', name: 'Gadget X', price: 49.99, stock: 20  },
-];
+  const sampleOrders = [
+    { id: 'o1', userId: 'u1', products: [], status: 'delivered', total: 44.97 },
+    { id: 'o2', userId: 'u2', products: [], status: 'pending',   total: 49.99 },
+  ];
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+  test('happy path – returns all orders as JSON', () => {
+    findAll.mockReturnValue(sampleOrders);
+    const req = {};
+    const res = makeRes();
 
-describe('placeOrder', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // Default: findAll('products') returns the catalogue; findAll('orders') not used by placeOrder
-    findAll.mockImplementation((collection) => {
-      if (collection === 'products') return [...PRODUCTS];
-      return [];
-    });
-    uuidv4.mockReturnValue('test-uuid-1234');
+    getOrdersList(req, res);
+
+    expect(findAll).toHaveBeenCalledWith('orders');
+    expect(res.json).toHaveBeenCalledWith(sampleOrders);
   });
 
-  // -------------------------------------------------------------------------
-  // 400 – validation failures
-  // -------------------------------------------------------------------------
+  test('edge case – returns empty array when store is empty', () => {
+    findAll.mockReturnValue([]);
+    const req = {};
+    const res = makeRes();
 
-  describe('400 Bad Request', () => {
-    test('missing userId returns 400 with descriptive error', () => {
-      const req = makeReq({ products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
+    getOrdersList(req, res);
 
-      placeOrder(req, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+});
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: userId, products (non-empty array)',
-      });
-      expect(insert).not.toHaveBeenCalled();
-    });
+// ---------------------------------------------------------------------------
+// getOrderById
+// ---------------------------------------------------------------------------
+describe('getOrderById', () => {
+  beforeEach(() => jest.clearAllMocks());
 
-    test('missing products returns 400', () => {
-      const req = makeReq({ userId: 'u1' });
-      const res = makeRes();
+  const order = { id: 'o1', userId: 'u1', products: [], status: 'pending', total: 9.99 };
 
-      placeOrder(req, res);
+  test('happy path – returns the order when found', () => {
+    findById.mockReturnValue(order);
+    const req = { params: { id: 'o1' } };
+    const res = makeRes();
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: userId, products (non-empty array)',
-      });
-      expect(insert).not.toHaveBeenCalled();
-    });
+    getOrderById(req, res);
 
-    test('products is not an array returns 400', () => {
-      const req = makeReq({ userId: 'u1', products: 'p1' });
-      const res = makeRes();
-
-      placeOrder(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: userId, products (non-empty array)',
-      });
-      expect(insert).not.toHaveBeenCalled();
-    });
-
-    test('products is an empty array returns 400', () => {
-      const req = makeReq({ userId: 'u1', products: [] });
-      const res = makeRes();
-
-      placeOrder(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: userId, products (non-empty array)',
-      });
-      expect(insert).not.toHaveBeenCalled();
-    });
-
-    test('userId is empty string returns 400', () => {
-      const req = makeReq({ userId: '', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-
-      placeOrder(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: userId, products (non-empty array)',
-      });
-      expect(insert).not.toHaveBeenCalled();
-    });
-
-    test('both userId and products missing returns 400', () => {
-      const req = makeReq({});
-      const res = makeRes();
-
-      placeOrder(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(insert).not.toHaveBeenCalled();
-    });
+    expect(findById).toHaveBeenCalledWith('orders', 'o1');
+    expect(res.json).toHaveBeenCalledWith(order);
+    expect(res.status).not.toHaveBeenCalled();
   });
 
-  // -------------------------------------------------------------------------
-  // 201 – successful order creation
-  // -------------------------------------------------------------------------
+  test('error case – 404 when order not found', () => {
+    findById.mockReturnValue(null);
+    const req = { params: { id: 'does-not-exist' } };
+    const res = makeRes();
 
-  describe('201 Created', () => {
-    test('creates order with correct total for a single product with qty 1', () => {
-      // p1 = 9.99, qty = 1  →  total = 9.99
-      const req = makeReq({ userId: 'u1', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      const expectedOrder = {
-        id: 'test-uuid-1234',
-        userId: 'u1',
-        products: [{ productId: 'p1', qty: 1 }],
-        status: 'pending',
-        total: 9.99,
-      };
-      insert.mockReturnValue(expectedOrder);
+    getOrderById(req, res);
 
-      placeOrder(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Order not found' });
+  });
+});
 
-      expect(insert).toHaveBeenCalledWith('orders', expectedOrder);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(expectedOrder);
+// ---------------------------------------------------------------------------
+// placeOrder  (exported as placeOrder; the user spec calls it createOrder)
+// ---------------------------------------------------------------------------
+describe('placeOrder (createOrder)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const allProducts = [
+    { id: 'p1', name: 'Widget A', price: 9.99,  stock: 100 },
+    { id: 'p2', name: 'Widget B', price: 24.99, stock: 50  },
+  ];
+
+  test('happy path – creates order and returns 201 with computed total', () => {
+    uuidv4.mockReturnValue('new-uuid');
+    findAll.mockReturnValue(allProducts);
+    const inserted = {
+      id: 'new-uuid',
+      userId: 'u1',
+      products: [{ productId: 'p1', qty: 2 }],
+      status: 'pending',
+      total: 19.98,
+    };
+    insert.mockReturnValue(inserted);
+
+    const req = { body: { userId: 'u1', products: [{ productId: 'p1', qty: 2 }] } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(insert).toHaveBeenCalledWith('orders', expect.objectContaining({
+      id: 'new-uuid',
+      userId: 'u1',
+      status: 'pending',
+      total: 19.98,
+    }));
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(inserted);
+  });
+
+  test('edge case – products whose IDs are not in the catalogue contribute 0 to total', () => {
+    uuidv4.mockReturnValue('new-uuid-2');
+    findAll.mockReturnValue(allProducts);
+    const inserted = {
+      id: 'new-uuid-2',
+      userId: 'u2',
+      products: [{ productId: 'unknown', qty: 3 }],
+      status: 'pending',
+      total: 0,
+    };
+    insert.mockReturnValue(inserted);
+
+    const req = { body: { userId: 'u2', products: [{ productId: 'unknown', qty: 3 }] } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(insert).toHaveBeenCalledWith('orders', expect.objectContaining({ total: 0 }));
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('edge case – item.qty defaults to 1 when omitted', () => {
+    uuidv4.mockReturnValue('uuid-qty');
+    findAll.mockReturnValue(allProducts);
+    const inserted = {
+      id: 'uuid-qty',
+      userId: 'u1',
+      products: [{ productId: 'p1' }],
+      status: 'pending',
+      total: 9.99,
+    };
+    insert.mockReturnValue(inserted);
+
+    const req = { body: { userId: 'u1', products: [{ productId: 'p1' }] } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(insert).toHaveBeenCalledWith('orders', expect.objectContaining({ total: 9.99 }));
+  });
+
+  test('error case – 400 when userId is missing', () => {
+    const req = { body: { products: [{ productId: 'p1', qty: 1 }] } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Missing required fields: userId, products (non-empty array)',
     });
+    expect(insert).not.toHaveBeenCalled();
+  });
 
-    test('creates order with correct total for a single product with qty > 1', () => {
-      // p2 = 24.99, qty = 3  →  total = 74.97
-      const req = makeReq({ userId: 'u2', products: [{ productId: 'p2', qty: 3 }] });
+  test('error case – 400 when products is not an array', () => {
+    const req = { body: { userId: 'u1', products: 'bad' } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  test('error case – 400 when products array is empty', () => {
+    const req = { body: { userId: 'u1', products: [] } };
+    const res = makeRes();
+
+    placeOrder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateOrderStatus
+// ---------------------------------------------------------------------------
+describe('updateOrderStatus', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const updatedOrder = { id: 'o2', userId: 'u2', products: [], status: 'shipped', total: 49.99 };
+
+  test('happy path – updates status and returns the updated order', () => {
+    update.mockReturnValue(updatedOrder);
+    const req = { params: { id: 'o2' }, body: { status: 'shipped' } };
+    const res = makeRes();
+
+    updateOrderStatus(req, res);
+
+    expect(update).toHaveBeenCalledWith('orders', 'o2', { status: 'shipped' });
+    expect(res.json).toHaveBeenCalledWith(updatedOrder);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  test('edge case – accepts every valid status value', () => {
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    validStatuses.forEach((status) => {
+      jest.clearAllMocks();
+      update.mockReturnValue({ id: 'o1', status });
+      const req = { params: { id: 'o1' }, body: { status } };
       const res = makeRes();
-      const expectedOrder = {
-        id: 'test-uuid-1234',
-        userId: 'u2',
-        products: [{ productId: 'p2', qty: 3 }],
-        status: 'pending',
-        total: 74.97,
-      };
-      insert.mockReturnValue(expectedOrder);
 
-      placeOrder(req, res);
+      updateOrderStatus(req, res);
 
-      expect(insert).toHaveBeenCalledWith('orders', expectedOrder);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(expectedOrder);
-    });
-
-    test('creates order with correct summed total for multiple products', () => {
-      // p1 (9.99 × 2) + p2 (24.99 × 1)  →  19.98 + 24.99 = 44.97
-      const req = makeReq({
-        userId: 'u1',
-        products: [{ productId: 'p1', qty: 2 }, { productId: 'p2', qty: 1 }],
-      });
-      const res = makeRes();
-      const expectedOrder = {
-        id: 'test-uuid-1234',
-        userId: 'u1',
-        products: [{ productId: 'p1', qty: 2 }, { productId: 'p2', qty: 1 }],
-        status: 'pending',
-        total: 44.97,
-      };
-      insert.mockReturnValue(expectedOrder);
-
-      placeOrder(req, res);
-
-      expect(insert).toHaveBeenCalledWith('orders', expectedOrder);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(expectedOrder);
-    });
-
-    test('defaults qty to 1 when qty is omitted from a product line item', () => {
-      // p3 = 49.99, no qty provided  →  total = 49.99
-      const req = makeReq({ userId: 'u3', products: [{ productId: 'p3' }] });
-      const res = makeRes();
-      const expectedOrder = {
-        id: 'test-uuid-1234',
-        userId: 'u3',
-        products: [{ productId: 'p3' }],
-        status: 'pending',
-        total: 49.99,
-      };
-      insert.mockReturnValue(expectedOrder);
-
-      placeOrder(req, res);
-
-      expect(insert).toHaveBeenCalledWith('orders', expectedOrder);
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
-
-    test('new order always has status "pending"', () => {
-      const req = makeReq({ userId: 'u1', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      expect(insertedOrder.status).toBe('pending');
-    });
-
-    test('uses a uuid for the new order id', () => {
-      uuidv4.mockReturnValue('fixed-uuid-abcd');
-      const req = makeReq({ userId: 'u1', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      expect(insertedOrder.id).toBe('fixed-uuid-abcd');
-    });
-
-    test('total is rounded to 2 decimal places', () => {
-      // Use a product whose price × qty produces a floating-point rounding candidate
-      // Override products with a price that triggers rounding: 0.1 + 0.2 = 0.30000000000000004
-      findAll.mockImplementation((collection) => {
-        if (collection === 'products') {
-          return [{ id: 'px', name: 'Tricky', price: 0.1, stock: 10 }];
-        }
-        return [];
-      });
-      const req = makeReq({ userId: 'u9', products: [{ productId: 'px', qty: 3 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      // 0.1 × 3 = 0.30000000000000004 raw; rounded → 0.3
-      expect(insertedOrder.total).toBe(0.3);
-    });
-
-    test('unknown productId is silently skipped (contributes 0 to total)', () => {
-      const req = makeReq({
-        userId: 'u1',
-        products: [{ productId: 'UNKNOWN', qty: 5 }, { productId: 'p1', qty: 1 }],
-      });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      // Only p1 (9.99 × 1) contributes
-      expect(insertedOrder.total).toBe(9.99);
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
-
-    test('all products unknown results in total of 0', () => {
-      const req = makeReq({
-        userId: 'u1',
-        products: [{ productId: 'NOPE', qty: 2 }],
-      });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      expect(insertedOrder.total).toBe(0);
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
-
-    test('inserts order into the "orders" collection', () => {
-      const req = makeReq({ userId: 'u2', products: [{ productId: 'p2', qty: 1 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      expect(insert).toHaveBeenCalledTimes(1);
-      expect(insert.mock.calls[0][0]).toBe('orders');
-    });
-
-    test('response body is the object returned by insert', () => {
-      const req = makeReq({ userId: 'u1', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      const dbReturn = { id: 'test-uuid-1234', userId: 'u1', products: [], status: 'pending', total: 9.99, _extra: true };
-      insert.mockReturnValue(dbReturn);
-
-      placeOrder(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(dbReturn);
-    });
-
-    test('preserves the original products array on the inserted record', () => {
-      const productItems = [{ productId: 'p1', qty: 2 }, { productId: 'p3', qty: 1 }];
-      const req = makeReq({ userId: 'u1', products: productItems });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      expect(insertedOrder.products).toEqual(productItems);
-    });
-
-    test('preserves the userId on the inserted record', () => {
-      const req = makeReq({ userId: 'u-special', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
-
-      placeOrder(req, res);
-
-      const insertedOrder = insert.mock.calls[0][1];
-      expect(insertedOrder.userId).toBe('u-special');
+      expect(update).toHaveBeenCalledWith('orders', 'o1', { status });
+      expect(res.json).toHaveBeenCalled();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Interaction / side-effect checks
-  // -------------------------------------------------------------------------
+  test('error case – 400 when status is invalid', () => {
+    const req = { params: { id: 'o1' }, body: { status: 'flying' } };
+    const res = makeRes();
 
-  describe('DB interaction', () => {
-    test('calls findAll("products") exactly once per request', () => {
-      const req = makeReq({ userId: 'u1', products: [{ productId: 'p1', qty: 1 }] });
-      const res = makeRes();
-      insert.mockImplementation((_, item) => item);
+    updateOrderStatus(req, res);
 
-      placeOrder(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.stringContaining('status must be one of') }),
+    );
+    expect(update).not.toHaveBeenCalled();
+  });
 
-      expect(findAll).toHaveBeenCalledWith('products');
-      expect(findAll).toHaveBeenCalledTimes(1);
-    });
+  test('error case – 400 when status is missing', () => {
+    const req = { params: { id: 'o1' }, body: {} };
+    const res = makeRes();
 
-    test('does not call findAll when validation fails', () => {
-      const req = makeReq({ userId: 'u1', products: [] });
-      const res = makeRes();
+    updateOrderStatus(req, res);
 
-      placeOrder(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(update).not.toHaveBeenCalled();
+  });
 
-      expect(findAll).not.toHaveBeenCalled();
-    });
+  test('error case – 404 when order does not exist', () => {
+    update.mockReturnValue(null);
+    const req = { params: { id: 'no-such-order' }, body: { status: 'pending' } };
+    const res = makeRes();
+
+    updateOrderStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Order not found' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cancelOrder
+// ---------------------------------------------------------------------------
+describe('cancelOrder', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const existingOrder   = { id: 'o2', userId: 'u2', products: [], status: 'pending',   total: 49.99 };
+  const cancelledOrder  = { id: 'o2', userId: 'u2', products: [], status: 'cancelled', total: 49.99 };
+
+  test('happy path – sets status to cancelled and returns updated order', () => {
+    findById.mockReturnValue(existingOrder);
+    update.mockReturnValue(cancelledOrder);
+    const req = { params: { id: 'o2' } };
+    const res = makeRes();
+
+    cancelOrder(req, res);
+
+    expect(findById).toHaveBeenCalledWith('orders', 'o2');
+    expect(update).toHaveBeenCalledWith('orders', 'o2', { status: 'cancelled' });
+    expect(res.json).toHaveBeenCalledWith(cancelledOrder);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  test('edge case – cancelling an already-cancelled order still calls update', () => {
+    const alreadyCancelled = { ...existingOrder, status: 'cancelled' };
+    findById.mockReturnValue(alreadyCancelled);
+    update.mockReturnValue(alreadyCancelled);
+    const req = { params: { id: 'o2' } };
+    const res = makeRes();
+
+    cancelOrder(req, res);
+
+    expect(update).toHaveBeenCalledWith('orders', 'o2', { status: 'cancelled' });
+    expect(res.json).toHaveBeenCalledWith(alreadyCancelled);
+  });
+
+  test('error case – 404 when order not found', () => {
+    findById.mockReturnValue(null);
+    const req = { params: { id: 'ghost-order' } };
+    const res = makeRes();
+
+    cancelOrder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Order not found' });
+    expect(update).not.toHaveBeenCalled();
   });
 });

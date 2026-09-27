@@ -31,13 +31,16 @@ function stripMarkdownFences(text: string): string {
 /**
  * Builds the `bob run` prompt for a single function.
  */
-function buildPrompt(fnName: string, filePath: string, projectPath: string, testOutPath: string): string {
+function buildPrompt(fnNames: string[], filePath: string, projectPath: string, testOutPath: string): string {
   const relFile = path.relative(projectPath, filePath).replace(/\\/g, '/');
   const relOut = path.relative(projectPath, testOutPath).replace(/\\/g, '/');
+  const fnList = fnNames.join(', ');
   return (
-    `Write a complete Jest test file for ${fnName} in ${relFile}. ` +
+    `Write a complete Jest test file covering ALL of the following functions in ${relFile}: ${fnList}. ` +
+    `Include at least one test (happy path, edge case, and error case where applicable) for each function. ` +
     `Write it ONLY to ${relOut} — do NOT modify any existing file. ` +
     `Do not run any tests yourself. ` +
+    `Add a beforeEach(() => jest.clearAllMocks()) inside every describe block so mock call counts reset between tests. ` +
     `When constructing test dates, use Date.UTC(year, month, day) rather than raw millisecond literals, to avoid arithmetic errors. ` +
     `When mocking an Express response object, define json/status/send as separate jest.fn() calls first, then attach them to the object — never reference the object being defined within its own literal. ` +
     `Output only the file write, then stop.`
@@ -85,15 +88,18 @@ export class BobTestWriter {
     let bobResult: GenerationResult | null = null;
 
     try {
-      const prompt = buildPrompt(plan.functionName, plan.filePath, projectPath, outputFile);
+      const fnNames = plan.functionNames && plan.functionNames.length > 0
+        ? plan.functionNames
+        : [plan.functionName];
+      const prompt = buildPrompt(fnNames, plan.filePath, projectPath, outputFile);
 
       const cmd = [
         'bob', 'run',
         '--accept-license',
         '--format', 'json',
         '--mode', 'agent',
-        '--max-cost', '0.30',
-        '--max-turns', '3',
+        '--max-cost', '0.50',
+        '--max-turns', '5',
         '--disable-tool-groups', 'execute',
         JSON.stringify(prompt),
       ].join(' ');

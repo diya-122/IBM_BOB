@@ -21,6 +21,8 @@ export interface PipelineResult {
   report: CoverageReport;
   outputDir: string;
   ranAt: string;
+  /** Total Bobcoin cost across all Bob API calls in this pipeline run. */
+  totalSessionCost: number;
 }
 
 /**
@@ -123,6 +125,15 @@ export async function runPipeline(
 
   const report = new CoverageDiff().compare(beforeCoverage, afterCoverage);
 
+  const totalSessionCost = generationResults.reduce(
+    (sum, r) => sum + (r.sessionCost ?? 0),
+    0,
+  );
+
+  process.stdout.write(
+    `[Pipeline] Total session cost: ${totalSessionCost.toFixed(4)} Bobcoins\n`,
+  );
+
   return {
     projectPath: resolvedProject,
     before: beforeCoverage,
@@ -133,5 +144,6 @@ export async function runPipeline(
     report,
     outputDir: resolvedOutput,
     ranAt: new Date().toISOString(),
+    totalSessionCost,
   };
 }

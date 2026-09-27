@@ -42,33 +42,54 @@ function buildTestCases(functionName: string): TestCase[] {
 }
 
 /**
- * Converts an array of risk scores into an ordered list of test plans.
+ * Converts an array of risk scores into an ordered list of test plans,
+ * one plan per source file (grouping all functions in that file together).
+ * This ensures a single Bob call writes one comprehensive test file per
+ * source file rather than one call per function overwriting the same file.
  */
 export class TestPlanner {
   /**
-   * Transforms {@link RiskScore} entries into {@link TestPlan} objects, each
-   * containing three generated {@link TestCase} instances (happy, edge, error).
+   * Groups {@link RiskScore} entries by `filePath` and produces one
+   * {@link TestPlan} per source file containing all uncovered functions.
    *
-   * Priority mapping:
-   * - `riskScore > 15` → `'high'`
-   * - `riskScore > 5`  → `'medium'`
-   * - otherwise        → `'low'`
+   * Priority is derived from the highest risk score found in the file.
+   * `functionName` is set to the primary (highest-risk) function;
+   * `functionNames` lists all functions in the file.
    *
    * `estimatedLines` is calculated as `20 + testCases.length * 8`.
    *
    * @param riskScores - Scored functions produced by {@link RiskScorer}.
-   * @returns Array of {@link TestPlan} objects, one per risk score entry.
+   * @returns Array of {@link TestPlan} objects, one per source file.
    */
   plan(riskScores: RiskScore[]): TestPlan[] {
-    return riskScores.map((rs) => {
-      const testCases = buildTestCases(rs.functionName);
-      return {
-        filePath: rs.filePath,
-        functionName: rs.functionName,
-        priority: priorityFromScore(rs.riskScore),
+    // Group risk scores by file path
+    const byFile = new Map<string, RiskScore[]>();
+    for (const rs of riskScores) {
+      const existing = byFile.get(rs.filePath) ?? [];
+      existing.push(rs);
+      byFile.set(rs.filePath, existing);
+    }
+
+    const plans: TestPlan[] = [];
+
+    for (const [filePath, scores] of byFile) {
+      // Scores are already sorted descending by riskScore from RiskScorer
+      const topScore = scores[0];
+      const functionNames = [...new Set(scores.map((s) => s.functionName))];
+      const testCases = buildTestCases(topScore.functionName);
+
+      plans.push({
+        filePath,
+        functionName: topScore.functionName,
+        functionNames,
+        priority: priorityFromScore(topScore.riskScore),
         testCases,
         estimatedLines: 20 + testCases.length * 8,
-      };
-    });
+      });
+    }
+
+    // Sort plans by priority (high first)
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    return plans.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
   }
 }

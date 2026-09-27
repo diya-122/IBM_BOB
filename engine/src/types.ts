@@ -64,14 +64,16 @@ export interface TestCase {
 }
 
 /**
- * A test plan for one function in a source file.
+ * A test plan for one source file (covering all uncovered functions within it).
  */
 export interface TestPlan {
   /** Absolute path to the source file under test. */
   filePath: string;
-  /** Name of the function under test. */
+  /** Primary function name (highest-risk function in the file). */
   functionName: string;
-  /** Generation priority derived from risk score. */
+  /** All function names in the file that need coverage. */
+  functionNames: string[];
+  /** Generation priority derived from the highest risk score in the file. */
   priority: 'high' | 'medium' | 'low';
   /** Ordered list of test cases to generate. */
   testCases: TestCase[];

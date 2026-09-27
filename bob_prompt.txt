@@ -1,0 +1,26 @@
+Read docs/session-08.md for context.
+
+1. DashboardPage.tsx is still rendering hardcoded mock data (Overall
+   Coverage 30.6%, Files Analyzed 8, Tests Generated 26, Avg Risk
+   Score 7.9, and a fake "Week 1-6" Coverage Trend chart) instead of
+   live pipeline data, unlike ReportsPage.tsx which was correctly
+   wired to useReport() in session-05. Wire DashboardPage to the same
+   live data source (useReport() / usePipeline(), whichever the
+   Reports page uses) so all four summary cards reflect the actual
+   last pipeline run. Remove or clearly gate the "Coverage Trend"
+   chart behind real historical data — if there's no real multi-run
+   history to chart yet, replace it with something honest (e.g. a
+   single current-state bar, or hide the chart) rather than fabricated
+   weekly data.
+
+2. On the Generate page, the risk/function table below the pipeline
+   summary still shows 0.0% coverage per function even after a
+   successful run with 100% overall coverage — it's reading a stale
+   pre-run snapshot. Find where this table's data comes from and
+   refresh it from the same post-pipeline result the summary banner
+   above it already uses correctly.
+
+3. Confirm build is clean, no new TypeScript errors.
+
+Write docs/session-09.md, same format, short — this is UI wiring only,
+no backend/pipeline logic changes. Delete bob_prompt.txt when done.
