@@ -33,7 +33,12 @@ app.use((_req, res, next) => {
 
 // ── persistence ────────────────────────────────────────────────────────────
 
-const PERSIST_PATH = path.resolve(process.env['PERSIST_PATH'] ?? 'pipeline-result.json');
+// Default to the directory containing this compiled file so the JSON sits
+// alongside server.js (engine/dist/) rather than wherever the process was
+// launched from.
+const PERSIST_PATH = path.resolve(
+  process.env['PERSIST_PATH'] ?? path.join(__dirname, 'pipeline-result.json'),
+);
 
 function saveToDisk(data: unknown): void {
   try {
@@ -66,6 +71,27 @@ let lastAnalysis: AnalysisState | null = null;
 let lastGeneration: GenerationState | null = null;
 let lastPipeline: PipelineResult | null = loadFromDisk<PipelineResult>();
 
+// ── / ─────────────────────────────────────────────────────────────────────
+
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    name: 'TestForge Engine API',
+    version: '0.1.0',
+    endpoints: [
+      'GET  /          — this help',
+      'GET  /status    — server state (analyzed, generated, pipelineRan)',
+      'POST /analyze   — analyze a project (body: { projectPath })',
+      'GET  /analyze   — last analysis result',
+      'POST /generate  — generate tests (body: { outputDir? })',
+      'GET  /generate  — last generation result',
+      'POST /pipeline  — full pipeline (body: { projectPath, outputDir? })',
+      'GET  /pipeline  — last pipeline result',
+      'GET  /report    — last coverage report',
+    ],
+    note: 'projectPath can be an absolute Linux/WSL path (/home/user/project) or relative to the repo root (./sample-app)',
+  });
+});
+
 // ── /status ────────────────────────────────────────────────────────────────
 
 app.get('/status', (_req: Request, res: Response) => {
@@ -82,11 +108,38 @@ app.get('/status', (_req: Request, res: Response) => {
 
 // ── /analyze ───────────────────────────────────────────────────────────────
 
+/** Returns true when the path looks like a Windows absolute path (C:\…). */
+function isWindowsAbsPath(p: string): boolean {
+  return /^[A-Za-z]:[/\\]/.test(p);
+}
+
+/**
+ * Resolves a project path to an absolute path.
+ *
+ * Relative paths (e.g. `./sample-app`, `sample-app`) are resolved relative to
+ * the **repo root** — two directories above `engine/dist/` — so they work
+ * correctly regardless of the directory `node` was launched from.
+ *
+ * Absolute paths are returned as-is.
+ */
+function resolveProjectPath(p: string): string {
+  if (path.isAbsolute(p)) return p;
+  // __dirname = engine/dist  →  ../.. = repo root
+  const repoRoot = path.resolve(__dirname, '../..');
+  return path.resolve(repoRoot, p);
+}
+
 app.post('/analyze', async (req: Request, res: Response) => {
   const { projectPath } = req.body as { projectPath?: string };
   if (!projectPath) { res.status(400).json({ error: 'projectPath is required' }); return; }
+  if (isWindowsAbsPath(projectPath)) {
+    res.status(400).json({
+      error: `Windows path detected: "${projectPath}". Provide a Linux/WSL absolute path (e.g. /home/user/project) or a relative path like ./sample-app.`,
+    });
+    return;
+  }
 
-  const resolved = path.resolve(projectPath);
+  const resolved = resolveProjectPath(projectPath);
   if (!fs.existsSync(resolved)) { res.status(404).json({ error: `Not found: ${resolved}` }); return; }
 
   const scanResult = new ProjectScanner().scan(resolved);
@@ -143,8 +196,14 @@ app.get('/generate', (_req: Request, res: Response) => {
 app.post('/pipeline', async (req: Request, res: Response) => {
   const { projectPath, outputDir } = req.body as { projectPath?: string; outputDir?: string };
   if (!projectPath) { res.status(400).json({ error: 'projectPath is required' }); return; }
+  if (isWindowsAbsPath(projectPath)) {
+    res.status(400).json({
+      error: `Windows path detected: "${projectPath}". Provide a Linux/WSL absolute path (e.g. /home/user/project) or a relative path like ./sample-app.`,
+    });
+    return;
+  }
 
-  const resolved = path.resolve(projectPath);
+  const resolved = resolveProjectPath(projectPath);
   if (!fs.existsSync(resolved)) { res.status(404).json({ error: `Not found: ${resolved}` }); return; }
 
   try {
