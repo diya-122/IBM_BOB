@@ -1,4 +1,4 @@
-import type { CoverageData, RiskScore, TestPlan, CoverageReport } from '../types';
+import type { CoverageData, RiskScore, TestPlan, CoverageReport, GenerationResult } from '../types';
 
 // ---------------------------------------------------------------------------
 // Coverage data — before state
@@ -350,4 +350,17 @@ export const mockGenerationProgress: Array<{
   { module: 'src/routes/users.js',            status: 'running',  testsGenerated: 6,  timeMs: 980  },
   { module: 'src/routes/products.js',         status: 'pending',  testsGenerated: 0,  timeMs: 0    },
   { module: 'src/middleware/validation.js',   status: 'pending',  testsGenerated: 0,  timeMs: 0    },
+];
+
+// ---------------------------------------------------------------------------
+// Generation results — used by ReportsPage generation table
+// ---------------------------------------------------------------------------
+export const mockGenerationResults: GenerationResult[] = [
+  { filePath: 'src/routes/orders.js',           success: true,  testsGenerated: 12, generator: 'bob',    sessionCost: 0.18 },
+  { filePath: 'src/middleware/auth.js',          success: true,  testsGenerated: 8,  generator: 'bob',    sessionCost: 0.14 },
+  { filePath: 'src/routes/users.js',             success: true,  testsGenerated: 10, generator: 'bob',    sessionCost: 0.21 },
+  { filePath: 'src/routes/products.js',          success: true,  testsGenerated: 8,  generator: 'bob',    sessionCost: 0.16 },
+  { filePath: 'src/middleware/validation.js',    success: true,  testsGenerated: 4,  generator: 'static', sessionCost: undefined },
+  { filePath: 'src/utils/helpers.js',            success: true,  testsGenerated: 8,  generator: 'bob',    sessionCost: 0.11 },
+  { filePath: 'src/db.js',                       success: true,  testsGenerated: 8,  generator: 'bob',    sessionCost: 0.13 },
 ];

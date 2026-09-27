@@ -42,6 +42,10 @@ export interface GenerationResult {
   generatedPath?: string;
   error?: string;
   testsGenerated: number;
+  /** 'bob' when AI generation ran; 'static' when it fell back to static analysis. */
+  generator?: 'bob' | 'static';
+  /** Bobcoin spend from stats.session_costs, if available. */
+  sessionCost?: number;
 }
 
 export interface CoverageReport {

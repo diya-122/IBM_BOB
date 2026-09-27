@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { CoverageData, RiskScore, CoverageReport } from '../types';
-import { mockCoverageData, mockRiskScores, mockReport } from '../mock/sampleData';
+import type { CoverageData, RiskScore, CoverageReport, GenerationResult } from '../types';
+import { mockCoverageData, mockRiskScores, mockReport, mockGenerationResults } from '../mock/sampleData';
 
 const API_BASE = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4001';
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -50,6 +50,20 @@ export function useReport(): UseQueryResult<CoverageReport, Error> {
         return data;
       } catch {
         return mockReport;
+      }
+    },
+  });
+}
+
+export function useGenerationResults(): UseQueryResult<GenerationResult[], Error> {
+  return useQuery<GenerationResult[], Error>({
+    queryKey: ['generation'],
+    queryFn: async () => {
+      try {
+        const data = await fetchJson<{ results: GenerationResult[] }>(`${API_BASE}/generate`);
+        return data.results;
+      } catch {
+        return mockGenerationResults;
       }
     },
   });

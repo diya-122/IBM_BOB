@@ -1,4 +1,4 @@
-import { useReport } from '../hooks/useApi';
+import { useReport, useGenerationResults } from '../hooks/useApi';
 import type { CoverageData, CoverageReport } from '../types';
 import DiffViewer from '../components/DiffViewer';
 import CoverageBadge from '../components/CoverageBadge';
@@ -82,8 +82,24 @@ function getMostImproved(report: CoverageReport): { before: CoverageData; after:
   return best;
 }
 
+function GeneratorBadge({ generator }: { generator?: 'bob' | 'static' }) {
+  if (generator === 'bob') {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+        bob
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+      static
+    </span>
+  );
+}
+
 export default function ReportsPage() {
   const { data: report, isLoading, isError } = useReport();
+  const { data: generationResults } = useGenerationResults();
 
   if (isLoading) {
     return (
@@ -192,6 +208,48 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+
+      {/* Generation table */}
+      {generationResults && generationResults.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+          <h2 className="font-semibold text-gray-700 text-sm">Test Generation</h2>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
+                <th className="pb-2 font-medium">File</th>
+                <th className="pb-2 font-medium">Generator</th>
+                <th className="pb-2 font-medium">Tests</th>
+                <th className="pb-2 font-medium">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {generationResults.map((r) => (
+                <tr key={r.filePath} className="border-b border-gray-50 last:border-0">
+                  <td className="py-1.5 font-mono text-xs text-gray-700 truncate max-w-[40%]">
+                    {r.filePath.split('/').pop()}
+                  </td>
+                  <td className="py-1.5">
+                    <GeneratorBadge generator={r.generator} />
+                  </td>
+                  <td className="py-1.5 text-gray-700">{r.testsGenerated}</td>
+                  <td className="py-1.5 text-gray-500">
+                    {r.sessionCost != null ? `$${r.sessionCost.toFixed(2)}` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {generationResults.length > 0 && (
+            <p className="text-xs text-gray-400">
+              Total session cost: $
+              {generationResults.reduce((s, r) => s + (r.sessionCost ?? 0), 0).toFixed(2)}
+              &nbsp;·&nbsp;
+              {generationResults.filter((r) => r.generator === 'bob').length} bob&nbsp;/&nbsp;
+              {generationResults.filter((r) => r.generator === 'static').length} static
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Diff viewer */}
       {mostImproved && (

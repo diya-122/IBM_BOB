@@ -1,8 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import { config as dotenvConfig } from 'dotenv';
 import { TestPlan, GenerationResult } from '../types';
 import { StaticTestWriter } from './static-test-writer';
+
+// Load engine/.env so BOB_API_KEY is available regardless of shell inheritance
+dotenvConfig({ path: path.resolve(__dirname, '../../.env') });
 
 /**
  * Response shape returned by `bob run --format json`.
@@ -35,6 +39,7 @@ function buildPrompt(fnName: string, filePath: string, projectPath: string, test
     `Write it ONLY to ${relOut} — do NOT modify any existing file. ` +
     `Do not run any tests yourself. ` +
     `When constructing test dates, use Date.UTC(year, month, day) rather than raw millisecond literals, to avoid arithmetic errors. ` +
+    `When mocking an Express response object, define json/status/send as separate jest.fn() calls first, then attach them to the object — never reference the object being defined within its own literal. ` +
     `Output only the file write, then stop.`
   );
 }
@@ -44,7 +49,10 @@ const staticWriter = new StaticTestWriter();
 /**
  * Generates Jest test files by shelling out to `bob run`.
  *
- * Falls back to {@link StaticTestWriter} if:
+ * If BOB_API_KEY is not set after loading .env, throws immediately so the
+ * missing key is obvious rather than producing a confusing silent fallback.
+ *
+ * Falls back to {@link StaticTestWriter} only when `bob run` itself fails:
  *  - `bob` is not on PATH (ENOENT), or
  *  - `bob run` exits with a non-zero code, or
  *  - the JSON response cannot be parsed.
@@ -55,6 +63,15 @@ const staticWriter = new StaticTestWriter();
  */
 export class BobTestWriter {
   async write(plan: TestPlan, outputDir: string): Promise<GenerationResult> {
+    // Fail fast if key is missing — do NOT silently fall back
+    const BOB_API_KEY = process.env.BOB_API_KEY;
+    if (!BOB_API_KEY) {
+      throw new Error(
+        '[BobTestWriter] BOB_API_KEY is not set. ' +
+        'Add it to engine/.env (BOB_API_KEY=<your-key>) and restart the engine.'
+      );
+    }
+
     const baseName = path.basename(plan.filePath, path.extname(plan.filePath));
     const ext = /\.tsx?$/.test(plan.filePath) ? 'ts' : 'js';
     const testDir = path.join(outputDir, '__tests__');
@@ -85,35 +102,42 @@ export class BobTestWriter {
         encoding: 'utf-8',
         timeout: 120_000,
         cwd: projectPath,
+        // Explicitly pass BOB_API_KEY — do not rely on ambient env inheritance
+        env: { ...process.env, BOB_API_KEY },
       });
 
-      // Locate the JSON object — Bob may prefix with non-JSON banner lines
-      const jsonStart = raw.indexOf('{');
-      if (jsonStart === -1) throw new Error('No JSON in bob run output');
+      // Bob may emit multiple newline-delimited JSON objects (e.g. an error
+      // object followed by the result object).  Find the last line that
+      // starts with '{' and contains '"type":"result"' — that is the payload.
+      const jsonLines = raw.split('\n').filter(l => l.trimStart().startsWith('{'));
+      if (jsonLines.length === 0) throw new Error('No JSON in bob run output');
+      const resultLine = jsonLines.find(l => l.includes('"type":"result"')) ?? jsonLines[jsonLines.length - 1];
 
-      const parsed: BobJsonResponse = JSON.parse(raw.slice(jsonStart));
+      const parsed: BobJsonResponse = JSON.parse(resultLine);
       const lastMessage = parsed.last_message ?? '';
-      const content = stripMarkdownFences(lastMessage);
       const sessionCost = parsed.stats?.session_costs ?? parsed.stats?.total_cost;
 
-      if (!content) throw new Error('bob run returned empty last_message');
-
       // Bob wrote the file itself via tool use — if it exists, we're done.
-      // If not (Bob only returned content), write it ourselves.
       if (!fs.existsSync(outputFile)) {
+        // Bob returned the content as text instead of writing it directly
+        const content = stripMarkdownFences(lastMessage);
+        if (!content) throw new Error('bob run returned empty last_message and did not write the file');
         fs.writeFileSync(outputFile, content, 'utf-8');
       }
 
+      const writtenContent = fs.readFileSync(outputFile, 'utf-8');
       bobResult = {
         filePath: plan.filePath,
         success: true,
         generatedPath: outputFile,
-        testsGenerated: (content.match(/\bit\(/g) ?? []).length || 1,
+        testsGenerated: (writtenContent.match(/\b(?:it|test)\(/g) ?? []).length || 1,
         generator: 'bob',
         sessionCost,
       };
-    } catch {
-      // bob not on PATH, timed out, or returned bad JSON — fall back to static analysis
+    } catch (err) {
+      // bob not on PATH, timed out, or returned bad JSON — fall back to static
+      const reason = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[BobTestWriter] fallback for ${plan.functionName}: ${reason.split('\n')[0]}\n`);
     }
 
     if (bobResult) return bobResult;

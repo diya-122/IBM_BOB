@@ -62,25 +62,40 @@ testforge/
 - Node.js >= 20
 - npm >= 10
 
-### Install
+### Install & Build
 
 ```bash
-npm install
+npm install          # install all workspace deps
+npm run build        # compile engine TypeScript → engine/dist/
 ```
 
-### Run the Dashboard (standalone demo)
+### Run the Engine API
 
 ```bash
-make dev-dashboard
-# Open http://localhost:5173
+npm run server       # start engine API on http://localhost:4001
 ```
 
-### Analyze the Sample App
+### Run the Dashboard
 
 ```bash
-make dev-sample-app   # start sample app + generate coverage
+npm run dev          # start Vite dashboard on http://localhost:5173
+```
+
+### Run the Full Pipeline
+
+```bash
+# POST to the engine API (engine must be running):
+curl -X POST http://localhost:4001/pipeline \
+  -H 'Content-Type: application/json' \
+  -d '{"projectPath":"./sample-app"}'
+```
+
+Or via Make:
+
+```bash
+make dev-sample-app   # start sample app + generate coverage baseline
 make analyze          # run testforge analyze
-make generate         # generate missing tests
+make generate         # generate AI-powered tests (BOB_API_KEY required)
 make report           # output markdown coverage report
 ```
 
@@ -110,21 +125,30 @@ make docker-down      # stop all services
 
 ---
 
-## Screenshots
+## Results
 
-> _Screenshots to be added after first demo run._
+**+73.3% function coverage** on the sample Express API — 10% → 83.3% functions covered, driven by AI-generated Jest test files.
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Statements | 40.9% | 75.0% | **+34.1%** |
+| Branches | 4.1% | 37.8% | **+33.7%** |
+| Functions | 10.0% | 83.3% | **+73.3%** |
+| Files improved | — | 6/6 | — |
+| Functions covered | — | 22 new | — |
 
 ---
 
 ## Team
 
-> _Team info placeholder — update before submission._
+Built by **Dhriti Manoj** for the IBM Bob 2.0 Hackathon.
+Bob (IBM's AI coding assistant) was used as the primary pair-programmer across all sessions — from engine scaffolding to AI test generation integration.
 
 ---
 
 ## Hackathon Context
 
-This project was built during the **IBM Bob 2.0 Hackathon**. Bob (IBM's AI coding assistant) was used to scaffold, implement, and iterate on TestForge across multiple sessions. Session reports are in [`docs/`](docs/).
+This project was built during the **IBM Bob 2.0 Hackathon**. Session reports documenting each build session are in [`docs/`](docs/).
 
 ---
 

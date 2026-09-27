@@ -201,6 +201,7 @@ function buildRouteHandlerTests(
   importPath: string,
   cjs: boolean,
   source: string,
+  strictMode: boolean = false,
 ): string {
   // Detect if supertest is available from the module's location
   const importLine = cjs
@@ -230,8 +231,8 @@ function buildRouteHandlerTests(
     else if (/^(delete|remove|cancel)/i.test(fn)) { method = 'delete'; route += '/:id'; }
     else if (/ById|ByI/i.test(fn)) { route += '/test-id'; }
 
-    const hasValidation = /status\(400\)/.test(body);
-    const has404 = /status\(404\)/.test(body);
+    const hasValidation = strictMode;
+    const has404 = strictMode;
 
     tests.push(
       ``,
@@ -274,8 +275,15 @@ function buildRouteHandlerTests(
  *  3. Detects whether functions are direct-call utilities or Express route
  *     handlers and generates the appropriate test style.
  *  4. Uses relative imports and proper `require()` vs `import` syntax.
+ *
+ * @param strictMode - When `false` (default), 400/404 assertions are only
+ *   emitted when the source body actually contains `status(400)`/`status(404)`.
+ *   When `true`, they are always emitted. Pass `true` only for apps that
+ *   uniformly validate every endpoint.
  */
 export class StaticTestWriter {
+  constructor(private readonly strictMode: boolean = false) {}
+
   /**
    * Writes a runnable Jest test file for `plan` to `outputDir/__tests__/`.
    */
@@ -315,7 +323,7 @@ export class StaticTestWriter {
     } else {
       const routeHandler = fnsToTest.some((f) => isRouteHandler(source, f));
       if (routeHandler) {
-        content = buildRouteHandlerTests(fnsToTest, importPath, cjs, source);
+        content = buildRouteHandlerTests(fnsToTest, importPath, cjs, source, this.strictMode);
       } else {
         // Generate one describe block per exported function
         const blocks: string[] = [
