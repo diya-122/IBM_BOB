@@ -6,7 +6,7 @@ jest.mock('fs');
 const mockedFs = jest.mocked(fs);
 
 /**
- * Minimal NYC coverage-final.json with one file entry.
+ * Minimal NYC coverage-final.json with one file entry (Istanbul v1 — has `l`).
  * - s (statements): 3 covered, 1 not covered → 75 %
  * - b (branches):   both branches of key "0" covered → 100 %
  * - f (functions):  1 covered, 1 not covered → 50 %
@@ -20,6 +20,29 @@ const MINIMAL_NYC_JSON = JSON.stringify({
     l: { '0': 1, '1': 1, '2': 1, '3': 0 },
     fnMap: {},
     statementMap: {},
+    branchMap: {},
+  },
+});
+
+/**
+ * Istanbul v2 / modern Jest coverage — no `l` map.
+ * Lines must be derived from statementMap + s.
+ * statementMap: 3 unique lines (1, 2, 3); line 1 has two statements (s0 hit, s1 not)
+ *   → line 1 covered (s0 hit), line 2 covered (s2 hit), line 3 NOT covered (s3 miss)
+ *   → 2 covered / 3 total → 66.67 %
+ */
+const V2_NYC_JSON = JSON.stringify({
+  '/project/src/bar.ts': {
+    s: { '0': 1, '1': 0, '2': 1, '3': 0 },
+    b: {},
+    f: {},
+    fnMap: {},
+    statementMap: {
+      '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } },
+      '1': { start: { line: 1, column: 12 }, end: { line: 1, column: 20 } },
+      '2': { start: { line: 2, column: 0 }, end: { line: 2, column: 10 } },
+      '3': { start: { line: 3, column: 0 }, end: { line: 3, column: 10 } },
+    },
     branchMap: {},
   },
 });
@@ -116,5 +139,15 @@ describe('CoverageParser', () => {
     mockedFs.readFileSync.mockReturnValue(MINIMAL_NYC_JSON);
     const results = parser.parse('/fake/coverage-final.json');
     expect(results[0].filePath).toBe('/project/src/foo.ts');
+  });
+
+  it('derives lines from statementMap when `l` map is absent (Istanbul v2)', () => {
+    mockedFs.readFileSync.mockReturnValue(V2_NYC_JSON);
+    const results = parser.parse('/fake/coverage-final.json');
+    expect(results).toHaveLength(1);
+    // 3 unique lines; line 1 covered (s0 hit), line 2 covered (s2 hit), line 3 not (s3 miss)
+    expect(results[0].lines.total).toBe(3);
+    expect(results[0].lines.covered).toBe(2);
+    expect(results[0].lines.pct).toBeCloseTo(66.67);
   });
 });

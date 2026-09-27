@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { mockRiskScores, mockGenerationProgress } from '../mock/sampleData';
-import type { CoverageReport, RiskScore } from '../types';
+import type { CoverageData, CoverageReport, RiskScore } from '../types';
 import RiskTable from '../components/RiskTable';
-import ProgressTracker from '../components/ProgressTracker';
 
 const API_BASE = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4001';
 // project path the engine will analyze — adjust via env for different setups
@@ -12,6 +10,7 @@ interface PipelineState {
   status: 'idle' | 'running' | 'done' | 'error';
   report: CoverageReport | null;
   riskScores: RiskScore[];
+  afterCoverage: CoverageData[];
   generatedCount: number;
   error: string | null;
 }
@@ -21,6 +20,7 @@ export default function TestGenerationPage() {
     status: 'idle',
     report: null,
     riskScores: [],
+    afterCoverage: [],
     generatedCount: 0,
     error: null,
   });
@@ -43,13 +43,25 @@ export default function TestGenerationPage() {
       const data = await res.json() as {
         report: CoverageReport;
         riskScores: RiskScore[];
+        after: CoverageData[];
         generationResults: Array<{ success: boolean }>;
       };
+
+      // Enrich risk scores with post-run coverage so the table shows live %
+      const afterMap = new Map<string, number>();
+      for (const d of (data.after ?? data.report?.after ?? [])) {
+        afterMap.set(d.filePath, d.functions.pct);
+      }
+      const enriched = data.riskScores.map((r) => {
+        const pct = afterMap.get(r.filePath);
+        return pct !== undefined ? { ...r, coveragePercent: pct } : r;
+      });
 
       setPipeline({
         status: 'done',
         report: data.report,
-        riskScores: data.riskScores,
+        riskScores: enriched,
+        afterCoverage: data.after ?? [],
         generatedCount: data.generationResults.filter((r) => r.success).length,
         error: null,
       });
@@ -62,7 +74,7 @@ export default function TestGenerationPage() {
     }
   }
 
-  const displayRisks = pipeline.riskScores.length > 0 ? pipeline.riskScores : mockRiskScores;
+  const displayRisks = pipeline.riskScores;
 
   return (
     <div className="p-6 space-y-6">
@@ -86,7 +98,6 @@ export default function TestGenerationPage() {
       {pipeline.status === 'error' && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
           ✖ Pipeline error: {pipeline.error}
-          <span className="ml-2 text-red-400">(API server may not be running — showing mock data)</span>
         </div>
       )}
       {pipeline.status === 'done' && pipeline.report && (
@@ -99,18 +110,18 @@ export default function TestGenerationPage() {
         </div>
       )}
 
-      {/* Risk table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <RiskTable risks={displayRisks} />
-      </div>
-
-      {/* Progress tracker — shown during/after run */}
-      {(pipeline.status === 'running' || pipeline.status === 'done') && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-base font-semibold text-gray-700 mb-3">Generation Progress</h2>
-          <ProgressTracker items={mockGenerationProgress} />
+      {/* Risk table — only shown after a pipeline run */}
+      {displayRisks.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <RiskTable risks={displayRisks} />
         </div>
       )}
+      {pipeline.status === 'idle' && (
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center text-sm text-gray-400">
+          Run the pipeline to see the function risk table with live coverage data.
+        </div>
+      )}
+
     </div>
   );
 }

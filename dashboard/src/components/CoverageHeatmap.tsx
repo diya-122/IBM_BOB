@@ -88,7 +88,7 @@ export default function CoverageHeatmap({ data, onSelect }: CoverageHeatmapProps
         data={data}
         dataKey="size"
         content={<CustomContent />}
-        onClick={(item: TreemapItem) => handleClick(item)}
+        onClick={(item: unknown) => handleClick(item as TreemapItem)}
       />
     </ResponsiveContainer>
   );
